@@ -24,6 +24,10 @@ type Movie struct {
 	Genre            string  `json:"genre"`
 }
 
+type Doc struct {
+	doc *goquery.Document
+}
+
 // ParseInt function parses the string value to int value and returns it.
 func ParseInt(num string) (int, error) {
 	return strconv.Atoi(num)
@@ -35,13 +39,15 @@ func Trim(content string) string {
 }
 
 // GetNewDocument function returns the html page content of corresponing URL.
-func GetNewDocument(url string) *goquery.Document {
+func GetNewDocument(url string) *Doc {
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Fatalf("[ERROR] chartUrl Document Creation Failed. Reason :%v", err)
 		os.Exit(1)
 	}
-	return doc
+	return &Doc{
+		doc: doc,
+	}
 }
 
 // GetURLProps function returns the correcsponding URL properties.
@@ -55,10 +61,10 @@ func GetURLProps(chartUrl string) *url.URL {
 }
 
 // GetMovieLinks functions fetches all the movie links from corresponding document.
-func GetMovieLinks(doc *goquery.Document, url string) []string {
+func GetMovieLinks(docs *Doc, url string) []string {
 	var movieLinks []string
 	urlProps := GetURLProps(url)
-	doc.Find(".titleColumn a").Each(func(index int, item *goquery.Selection) {
+	docs.doc.Find(".titleColumn a").Each(func(index int, item *goquery.Selection) {
 		linkTag := item
 		link, _ := linkTag.Attr("href")
 		movieLinks = append(movieLinks, urlProps.Scheme+"://"+urlProps.Host+link)
@@ -68,9 +74,9 @@ func GetMovieLinks(doc *goquery.Document, url string) []string {
 
 // GetTitleAndYear function returns the movie title and movie released year separately
 // from the corresponding movie.
-func GetTitleAndYear(doc *goquery.Document) (string, int) {
+func GetTitleAndYear(docs *Doc) (string, int) {
 
-	titleWithYear := Trim(doc.Find("div .title_wrapper h1").Contents().Text())
+	titleWithYear := Trim(docs.doc.Find("div .title_wrapper h1").Contents().Text())
 	titleList := strings.Split(titleWithYear, "(")
 
 	if len(titleList) == 2 {
@@ -86,8 +92,8 @@ func GetTitleAndYear(doc *goquery.Document) (string, int) {
 }
 
 // GetIMDBRating function returns IMDB rating of corresponding movie.
-func GetIMDBRating(doc *goquery.Document) float64 {
-	rating, err := strconv.ParseFloat(Trim(doc.Find("div .ratingValue strong span").Contents().Text()), 64)
+func GetIMDBRating(docs *Doc) float64 {
+	rating, err := strconv.ParseFloat(Trim(docs.doc.Find("div .ratingValue strong span").Contents().Text()), 64)
 	if err != nil {
 		rating = float64(DEFAULT_RATING)
 	}
@@ -95,19 +101,19 @@ func GetIMDBRating(doc *goquery.Document) float64 {
 }
 
 // GetSummary function returns the summary of the corresponding movie.
-func GetSummary(doc *goquery.Document) string {
-	return Trim(doc.Find("div .summary_text").Contents().Text())
+func GetSummary(docs *Doc) string {
+	return Trim(docs.doc.Find("div .summary_text").Contents().Text())
 }
 
 // GetDuration function returns the duration of the corresponding movie.
-func GetDuration(doc *goquery.Document) string {
-	return Trim(doc.Find("div .subtext time").Contents().Text())
+func GetDuration(docs *Doc) string {
+	return Trim(docs.doc.Find("div .subtext time").Contents().Text())
 }
 
 // GetGenre function returns the genre of the corresponding movie.
-func GetGenre(doc *goquery.Document) string {
+func GetGenre(docs *Doc) string {
 	var genreList []string
-	genreTags := doc.Find("div .subtext a")
+	genreTags := docs.doc.Find("div .subtext a")
 	count := len(genreTags.Nodes) - 1
 	genreTags.Each(func(index int, item *goquery.Selection) {
 		linkTag := item
