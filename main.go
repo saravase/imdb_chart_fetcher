@@ -76,7 +76,7 @@ func GetMovieLinks(docs *Doc, url string) []string {
 // from the corresponding movie.
 func GetTitleAndYear(docs *Doc) (string, int) {
 
-	titleWithYear := Trim(docs.doc.Find("div .title_wrapper h1").Contents().Text())
+	titleWithYear := Trim(docs.doc.Find("div .title_wrapper h1").Contents().Text()) // Title (YYYY)
 	titleList := strings.Split(titleWithYear, "(")
 
 	if len(titleList) == 2 {
