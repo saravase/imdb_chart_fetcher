@@ -1,7 +1,7 @@
 # imdb_chart_fetcher
 
 ### Step 1: Clone Repository
-  git clone git clone https://github.com/saravase/imdb_chart_fetcher.git
+  git clone https://github.com/saravase/imdb_chart_fetcher.git
 
 ### Step 2: Navigate to imdb_chart_fetcher folder
   cd imdb_chart_fetcher
