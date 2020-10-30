@@ -16,6 +16,6 @@
   Using For loop - 100 http request  took 5m10.6330182s
   
 #### make start-routine:[Multiple http request]
-	go run loop/main.go 'https://www.imdb.com/india/top-rated-indian-movies' 100
-  Using For loop - 100 http request  took 24.342507827s
+	go run routine/main.go 'https://www.imdb.com/india/top-rated-indian-movies' 100
+  Using Goroutine - 100 http request  took 26.511292424s
   
