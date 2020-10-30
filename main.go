@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -23,6 +25,8 @@ type Movie struct {
 	Duration         string  `json:"duration"`
 	Genre            string  `json:"genre"`
 }
+
+var wg sync.WaitGroup
 
 type Doc struct {
 	doc *goquery.Document
@@ -61,15 +65,16 @@ func GetURLProps(chartUrl string) *url.URL {
 }
 
 // GetMovieLinks functions fetches all the movie links from corresponding document.
-func GetMovieLinks(docs *Doc, url string) []string {
-	var movieLinks []string
+func GetMovieLinks(docs *Doc, url string) ([]string, []string) {
+	var movieLinks, movieNames []string
 	urlProps := GetURLProps(url)
 	docs.doc.Find(".titleColumn a").Each(func(index int, item *goquery.Selection) {
 		linkTag := item
 		link, _ := linkTag.Attr("href")
 		movieLinks = append(movieLinks, urlProps.Scheme+"://"+urlProps.Host+link)
+		movieNames = append(movieNames, linkTag.Contents().Text())
 	})
-	return movieLinks
+	return movieLinks, movieNames
 }
 
 // GetTitleAndYear function returns the movie title and movie released year separately
@@ -126,6 +131,13 @@ func GetGenre(docs *Doc) string {
 	return genre
 }
 
+// Handle multiple http request using defer and channel
+func docRoutine(c chan *Doc, movieLink string) {
+	defer wg.Done() //Wait until all the http request completion
+	doc := GetNewDocument(movieLink)
+	c <- doc // Write doc data in channel[c]
+}
+
 // GetMovieList function returns movies based on corresponding URL and itemCount.
 func GetMovieList() []*Movie {
 
@@ -136,7 +148,7 @@ func GetMovieList() []*Movie {
 
 	chartUrl := os.Args[1]
 	doc := GetNewDocument(chartUrl)
-	movieLinks := GetMovieLinks(doc, chartUrl)
+	movieLinks, movieNames := GetMovieLinks(doc, chartUrl)
 
 	itemsCount, err := ParseInt(os.Args[2])
 	if err != nil || itemsCount < 0 {
@@ -144,13 +156,21 @@ func GetMovieList() []*Movie {
 		os.Exit(1)
 	}
 
-	var movieList []*Movie
+	var movieList []*Movie              // Used to maintain the movie order
+	movieMap := make(map[string]*Movie) // Store the movie data [Movie Name] : [Movie Data]
+	queue := make(chan *Doc, 200)       // Channel initialized with 200 buffer size. Handle 200 request at a time.
 	for index, movieLink := range movieLinks {
 		if index+1 > itemsCount {
 			break
 		}
+		wg.Add(1)                       // Add http request in wait group
+		go docRoutine(queue, movieLink) // goroutine function call
+	}
 
-		doc = GetNewDocument(movieLink)
+	wg.Wait()    // Wait utill wg.Done() function completion
+	close(queue) // Close the channel
+
+	for doc := range queue { // Read channel data from here
 		title, year := GetTitleAndYear(doc)
 		movie := &Movie{
 			Title:            title,
@@ -160,12 +180,24 @@ func GetMovieList() []*Movie {
 			Duration:         GetDuration(doc),
 			Genre:            GetGenre(doc),
 		}
-		movieList = append(movieList, movie)
+		movieMap[title] = movie
 	}
+
+	// Maintain movie order
+	for index, order := range movieNames {
+
+		if movie, found := movieMap[order]; found && index < itemsCount {
+			movieList = append(movieList, movie)
+		}
+
+	}
+
 	return movieList
 }
 
 func main() {
+
+	defer elapsed("Using For loop - 100 http request ")() // <-- The trailing () is the deferred call
 
 	movies := GetMovieList()
 	if len(movies) == 0 {
@@ -179,4 +211,12 @@ func main() {
 	}
 
 	fmt.Println(string(movieList))
+
+}
+
+func elapsed(what string) func() {
+	start := time.Now()
+	return func() {
+		fmt.Printf("%s took %v\n", what, time.Since(start))
+	}
 }
