@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -197,8 +196,6 @@ func GetMovieList() []*Movie {
 
 func main() {
 
-	defer elapsed("Using Goroutine - 100 http request ")() // <-- The trailing () is the deferred call
-
 	movies := GetMovieList()
 	if len(movies) == 0 {
 		log.Println("[INFO] No movie record.")
@@ -212,11 +209,4 @@ func main() {
 
 	fmt.Println(string(movieList))
 
-}
-
-func elapsed(what string) func() {
-	start := time.Now()
-	return func() {
-		fmt.Printf("%s took %v\n", what, time.Since(start))
-	}
 }
