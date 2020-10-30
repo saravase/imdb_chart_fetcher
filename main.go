@@ -197,7 +197,7 @@ func GetMovieList() []*Movie {
 
 func main() {
 
-	defer elapsed("Using For loop - 100 http request ")() // <-- The trailing () is the deferred call
+	defer elapsed("Using Goroutine - 100 http request ")() // <-- The trailing () is the deferred call
 
 	movies := GetMovieList()
 	if len(movies) == 0 {
